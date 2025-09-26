@@ -1,0 +1,560 @@
+package com.diary.app
+
+import android.content.Context
+import android.content.SharedPreferences
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import java.text.SimpleDateFormat
+import java.util.*
+
+// Цветовые темы
+object AppThemes {
+    val BlueTheme = AppColors(
+        primary = Color(0xFF1976D2),
+        secondary = Color(0xFF42A5F5),
+        surface = Color(0xFFF5F5F5),
+        background = Color.White,
+        onSurface = Color.Black
+    )
+    
+    val PurpleTheme = AppColors(
+        primary = Color(0xFF7B1FA2),
+        secondary = Color(0xFFBA68C8),
+        surface = Color(0xFFF3E5F5),
+        background = Color.White,
+        onSurface = Color.Black
+    )
+    
+    val GreenTheme = AppColors(
+        primary = Color(0xFF388E3C),
+        secondary = Color(0xFF66BB6A),
+        surface = Color(0xFFE8F5E8),
+        background = Color.White,
+        onSurface = Color.Black
+    )
+    
+    val DarkBlueTheme = AppColors(
+        primary = Color(0xFF1565C0),
+        secondary = Color(0xFF42A5F5),
+        surface = Color(0xFF1E1E1E),
+        background = Color(0xFF121212),
+        onSurface = Color.White
+    )
+}
+
+data class AppColors(
+    val primary: Color,
+    val secondary: Color,
+    val surface: Color,
+    val background: Color,
+    val onSurface: Color
+)
+
+// Модель записи дневника
+data class DiaryEntry(
+    val id: String = UUID.randomUUID().toString(),
+    val title: String,
+    val content: String,
+    val date: Date = Date(),
+    val mood: String = "😊"
+)
+
+// Менеджер настроек
+class SettingsManager(context: Context) {
+    private val prefs: SharedPreferences = 
+        context.getSharedPreferences("diary_settings", Context.MODE_PRIVATE)
+    
+    var selectedTheme: String
+        get() = prefs.getString("theme", "blue") ?: "blue"
+        set(value) = prefs.edit().putString("theme", value).apply()
+    
+    var isDarkMode: Boolean
+        get() = prefs.getBoolean("dark_mode", false)
+        set(value) = prefs.edit().putBoolean("dark_mode", value).apply()
+}
+
+// Менеджер данных
+class DiaryDataManager {
+    private val _entries = mutableStateListOf<DiaryEntry>()
+    val entries: List<DiaryEntry> = _entries
+    
+    fun addEntry(entry: DiaryEntry) {
+        _entries.add(0, entry)
+    }
+    
+    fun updateEntry(updatedEntry: DiaryEntry) {
+        val index = _entries.indexOfFirst { it.id == updatedEntry.id }
+        if (index != -1) {
+            _entries[index] = updatedEntry
+        }
+    }
+    
+    fun deleteEntry(entryId: String) {
+        _entries.removeAll { it.id == entryId }
+    }
+}
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            DiaryApp()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DiaryApp() {
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+    val dataManager = remember { DiaryDataManager() }
+    val navController = rememberNavController()
+    
+    var selectedTheme by remember { mutableStateOf(settingsManager.selectedTheme) }
+    var isDarkMode by remember { mutableStateOf(settingsManager.isDarkMode) }
+    
+    val currentTheme = when (selectedTheme) {
+        "blue" -> if (isDarkMode) AppThemes.DarkBlueTheme else AppThemes.BlueTheme
+        "purple" -> AppThemes.PurpleTheme
+        "green" -> AppThemes.GreenTheme
+        else -> AppThemes.BlueTheme
+    }
+    
+    MaterialTheme(
+        colorScheme = ColorScheme(
+            primary = currentTheme.primary,
+            secondary = currentTheme.secondary,
+            surface = currentTheme.surface,
+            background = currentTheme.background,
+            onSurface = currentTheme.onSurface,
+            onPrimary = Color.White,
+            onSecondary = Color.White,
+            onBackground = currentTheme.onSurface,
+            // Остальные цвета по умолчанию
+            tertiary = currentTheme.secondary,
+            onTertiary = Color.White,
+            error = Color(0xFFB00020),
+            onError = Color.White,
+            errorContainer = Color(0xFFFCD8E4),
+            onErrorContainer = Color(0xFF65001E),
+            primaryContainer = currentTheme.primary.copy(alpha = 0.12f),
+            onPrimaryContainer = currentTheme.primary,
+            secondaryContainer = currentTheme.secondary.copy(alpha = 0.12f),
+            onSecondaryContainer = currentTheme.secondary,
+            tertiaryContainer = currentTheme.secondary.copy(alpha = 0.12f),
+            onTertiaryContainer = currentTheme.secondary,
+            surfaceVariant = currentTheme.surface,
+            onSurfaceVariant = currentTheme.onSurface,
+            outline = currentTheme.onSurface.copy(alpha = 0.12f),
+            outlineVariant = currentTheme.onSurface.copy(alpha = 0.06f),
+            scrim = Color.Black,
+            surfaceBright = currentTheme.surface,
+            surfaceDim = currentTheme.surface.copy(alpha = 0.87f),
+            surfaceContainer = currentTheme.surface,
+            surfaceContainerHigh = currentTheme.surface,
+            surfaceContainerHighest = currentTheme.surface,
+            surfaceContainerLow = currentTheme.surface,
+            surfaceContainerLowest = currentTheme.surface,
+            inverseSurface = if (isDarkMode) Color.White else Color(0xFF1C1B1F),
+            inverseOnSurface = if (isDarkMode) Color.Black else Color.White,
+            inversePrimary = currentTheme.primary
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(currentTheme.background)
+        ) {
+            NavHost(
+                navController = navController,
+                startDestination = "home"
+            ) {
+                composable("home") {
+                    HomeScreen(
+                        dataManager = dataManager,
+                        navController = navController,
+                        onSettingsClick = { navController.navigate("settings") }
+                    )
+                }
+                composable("add_entry") {
+                    AddEditEntryScreen(
+                        dataManager = dataManager,
+                        navController = navController
+                    )
+                }
+                composable("edit_entry/{entryId}") { backStackEntry ->
+                    val entryId = backStackEntry.arguments?.getString("entryId")
+                    val entry = dataManager.entries.find { it.id == entryId }
+                    if (entry != null) {
+                        AddEditEntryScreen(
+                            dataManager = dataManager,
+                            navController = navController,
+                            existingEntry = entry
+                        )
+                    }
+                }
+                composable("settings") {
+                    SettingsScreen(
+                        currentTheme = selectedTheme,
+                        isDarkMode = isDarkMode,
+                        onThemeChange = { theme ->
+                            selectedTheme = theme
+                            settingsManager.selectedTheme = theme
+                        },
+                        onDarkModeChange = { dark ->
+                            isDarkMode = dark
+                            settingsManager.isDarkMode = dark
+                        },
+                        navController = navController
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(
+    dataManager: DiaryDataManager,
+    navController: NavController,
+    onSettingsClick: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Мой дневник", fontSize = 24.sp, fontWeight = FontWeight.Bold) },
+                actions = {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Default.Settings, contentDescription = "Настройки")
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { navController.navigate("add_entry") }
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Добавить запись")
+            }
+        }
+    ) { paddingValues ->
+        if (dataManager.entries.isEmpty()) {
+            EmptyState(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(dataManager.entries) { entry ->
+                    DiaryEntryCard(
+                        entry = entry,
+                        onClick = { navController.navigate("edit_entry/${entry.id}") },
+                        onDelete = { dataManager.deleteEntry(entry.id) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EmptyState(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "📝",
+            fontSize = 64.sp
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Добро пожаловать в ваш дневник!",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Нажмите + чтобы добавить первую запись",
+            fontSize = 16.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DiaryEntryCard(
+    entry: DiaryEntry,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val dateFormatter = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = entry.mood,
+                            fontSize = 20.sp,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text(
+                            text = entry.title,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = dateFormatter.format(entry.date),
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Удалить",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            
+            if (entry.content.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = entry.content,
+                    fontSize = 14.sp,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddEditEntryScreen(
+    dataManager: DiaryDataManager,
+    navController: NavController,
+    existingEntry: DiaryEntry? = null
+) {
+    var title by remember { mutableStateOf(existingEntry?.title ?: "") }
+    var content by remember { mutableStateOf(existingEntry?.content ?: "") }
+    var selectedMood by remember { mutableStateOf(existingEntry?.mood ?: "😊") }
+    
+    val moods = listOf("😊", "😢", "😍", "😴", "🤔", "😤", "🎉", "😎", "🥺", "😇")
+    
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { 
+                    Text(if (existingEntry != null) "Редактировать" else "Новая запись") 
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                    }
+                },
+                actions = {
+                    TextButton(
+                        onClick = {
+                            if (title.isNotEmpty()) {
+                                val entry = DiaryEntry(
+                                    id = existingEntry?.id ?: UUID.randomUUID().toString(),
+                                    title = title,
+                                    content = content,
+                                    mood = selectedMood,
+                                    date = existingEntry?.date ?: Date()
+                                )
+                                
+                                if (existingEntry != null) {
+                                    dataManager.updateEntry(entry)
+                                } else {
+                                    dataManager.addEntry(entry)
+                                }
+                                navController.popBackStack()
+                            }
+                        }
+                    ) {
+                        Text("Сохранить", fontWeight = FontWeight.Medium)
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Выбор настроения
+            Text(
+                text = "Настроение",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
+            )
+            
+            LazyColumn(
+                modifier = Modifier.height(60.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(moods.chunked(5)) { moodRow ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        moodRow.forEach { mood ->
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        if (selectedMood == mood) 
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                        else 
+                                            MaterialTheme.colorScheme.surface
+                                    )
+                                    .clickable { selectedMood = mood },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(text = mood, fontSize = 24.sp)
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Заголовок
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Заголовок") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            
+            // Содержание
+            OutlinedTextField(
+                value = content,
+                onValueChange = { content = it },
+                label = { Text("Что произошло сегодня?") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                minLines = 8
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(
+    currentTheme: String,
+    isDarkMode: Boolean,
+    onThemeChange: (String) -> Unit,
+    onDarkModeChange: (Boolean) -> Unit,
+    navController: NavController
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Настройки") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            // Темная тема
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Темная тема",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Переключить на темный режим",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorSche
