@@ -1,0 +1,36 @@
+<resources>
+    <string name="app_name">Мой Дневник</string>
+    
+    <!-- Главный экран -->
+    <string name="home_title">Мой дневник</string>
+    <string name="add_entry">Добавить запись</string>
+    <string name="settings">Настройки</string>
+    <string name="empty_state_title">Добро пожаловать в ваш дневник!</string>
+    <string name="empty_state_subtitle">Нажмите + чтобы добавить первую запись</string>
+    
+    <!-- Добавление/редактирование записи -->
+    <string name="new_entry">Новая запись</string>
+    <string name="edit_entry">Редактировать</string>
+    <string name="save">Сохранить</string>
+    <string name="back">Назад</string>
+    <string name="mood_label">Настроение</string>
+    <string name="title_hint">Заголовок</string>
+    <string name="content_hint">Что произошло сегодня?</string>
+    <string name="delete">Удалить</string>
+    
+    <!-- Настройки -->
+    <string name="settings_title">Настройки</string>
+    <string name="dark_theme">Темная тема</string>
+    <string name="dark_theme_description">Переключить на темный режим</string>
+    <string name="color_scheme">Цветовая схема</string>
+    <string name="theme_blue">Синяя</string>
+    <string name="theme_purple">Фиолетовая</string>
+    <string name="theme_green">Зеленая</string>
+    <string name="selected">Выбрано</string>
+    
+    <!-- Общие -->
+    <string name="ok">ОК</string>
+    <string name="cancel">Отмена</string>
+    <string name="confirm_delete">Подтвердить удаление</string>
+    <string name="delete_entry_message">Вы уверены, что хотите удалить эту запись?</string>
+</resources>
